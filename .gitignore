@@ -1,0 +1,9 @@
+# Python Environment & Logs
+.venv/
+__pycache__/
+*.log
+scraper/*.log
+*.db
+
+# CSV Data Exports (Ağır Veri Çıktıları)
+data/csv/

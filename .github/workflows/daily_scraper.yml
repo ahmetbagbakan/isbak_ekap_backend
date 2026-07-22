@@ -1,0 +1,52 @@
+name: EKAP Daily Tender Scraper 🚀
+
+on:
+  schedule:
+    # Her gece 02:00 UTC (TSİ 05:00) otomatik çalışır
+    - cron: '0 2 * * *'
+  # GitHub Arayüzünden manuel "Run Workflow" butonu ile başlatma imkanı
+  workflow_dispatch:
+
+jobs:
+  scrape-and-update:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: isbak_ekap_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 1. Repoyu İndir
+        uses: actions/checkout@v4
+
+      - name: 2. Python Ortamını Kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 3. Bağımlılıkları Yükle
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 4. EKAP Veri Çekme Motorunu Çalıştır (PostgreSQL)
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_NAME: isbak_ekap_db
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: |
+          python run_scraper.py
