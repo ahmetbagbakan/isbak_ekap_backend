@@ -7,3 +7,18 @@ scraper/*.log
 
 # CSV Data Exports (Ağır Veri Çıktıları)
 data/csv/
+
+# .NET derleme çıktıları
+bin/
+obj/
+
+# Ortam / ayar dosyaları (bağlantı bilgisi, şifre içerir)
+.env
+appsettings.json
+appsettings.Development.json
+
+# Mac / editör sistem dosyaları
+.DS_Store
+
+# Kişisel notlar (ekip reposuna gerekmez)
+EKAP_Backend_Context.md
