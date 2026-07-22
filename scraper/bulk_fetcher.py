@@ -331,9 +331,15 @@ async def search_tenders_fast(client: EKAPClient, **kwargs) -> dict:
     }
 
 
-def generate_month_ranges(start_year: int = 2026, end_year: int = None):
+def generate_month_ranges(start_year: int = 2026, end_year: int = None, daily: bool = False):
     """Gelecek ihale ilanlarını da kapsayacak şekilde YYYY-MM-DD formatında tüm ay aralıklarını üretir."""
     now = datetime.now()
+    if daily:
+        # Günlük taramada sadece son 7 gün ile önümüzdeki 30 günün ihalelerini hızlıca tara
+        start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+        end_date = (now + timedelta(days=30)).strftime("%Y-%m-%d")
+        return [("Günlük-Tarama", start_date, end_date)]
+
     if end_year is None:
         end_year = now.year + 1
 
@@ -363,10 +369,11 @@ async def fetch_phase1(
     start_year: int = 2026,
     page_size: int = 100,
     delay: float = 0.3,
+    daily: bool = False,
 ):
     """Aşama 1: Tarih aralıklarıyla tüm ihalelerin liste verisini PostgreSQL'e çek."""
-    month_ranges = generate_month_ranges(start_year=start_year)
-    log.info(f"Aşama 1: Toplam {len(month_ranges)} ay aralığı taranacak (PostgreSQL).")
+    month_ranges = generate_month_ranges(start_year=start_year, daily=daily)
+    log.info(f"Aşama 1: Toplam {len(month_ranges)} aralık taranacak (PostgreSQL).")
 
     total_saved = 0
     phase_start = time.time()
@@ -549,7 +556,7 @@ async def run(args):
 
     try:
         if args.phase in (None, 1):
-            await fetch_phase1(client, conn, start_year=args.start_year)
+            await fetch_phase1(client, conn, start_year=args.start_year, daily=args.daily)
 
         if args.phase in (None, 2):
             await fetch_phase2(client, conn, concurrency=args.concurrency)
@@ -569,6 +576,7 @@ def main():
     parser.add_argument("--delay", type=float, default=0.3, help="İstek arası bekleme")
     parser.add_argument("--status", action="store_true", help="Durum raporunu göster")
     parser.add_argument("--wipe", action="store_true", help="DB'yi sıfırla")
+    parser.add_argument("--daily", action="store_true", help="Günlük hızlı tarama modu (Son 7 gün ve gelecek 30 gün)")
 
     # PostgreSQL Bağlantı Ayarları
     parser.add_argument("--host", type=str, default=DB_HOST, help="PostgreSQL Host")

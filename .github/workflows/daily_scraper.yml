@@ -41,7 +41,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 4. EKAP Veri Çekme Motorunu Çalıştır (PostgreSQL)
+      - name: 4. EKAP Veri Çekme Motorunu Çalıştır (PostgreSQL Daily)
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
@@ -49,4 +49,4 @@ jobs:
           DB_USER: postgres
           DB_PASSWORD: postgres
         run: |
-          python run_scraper.py
+          python run_scraper.py --daily
