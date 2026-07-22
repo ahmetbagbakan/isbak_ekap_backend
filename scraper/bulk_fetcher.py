@@ -205,7 +205,7 @@ def save_tender_from_raw(conn, raw: dict):
                 (id, ikn, adi, idare_adi, il, ihale_tarihi, ihale_turu,
                  ihale_usulu, ihale_durumu, e_ihale, dokuman_sayisi)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO NOTHING
+            ON CONFLICT (ikn) DO NOTHING
         """, (
             str(raw.get("id")),
             str(raw.get("ikn")),
