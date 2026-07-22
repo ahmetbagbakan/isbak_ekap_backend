@@ -16,7 +16,7 @@ public class EkapDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Tablo isimlerini SQLite'takiyle aynı tutuyoruz (küçük harf)
+        // Tablo isimlerini PostgreSQL'dekiyle aynı tutuyoruz (küçük harf)
         modelBuilder.Entity<Tender>().ToTable("tenders");
         modelBuilder.Entity<TenderCharacteristic>().ToTable("tender_characteristics");
         modelBuilder.Entity<TenderOkasCode>().ToTable("tender_okas_codes");
