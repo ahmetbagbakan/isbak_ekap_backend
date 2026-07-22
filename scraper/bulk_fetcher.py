@@ -61,44 +61,49 @@ log = logging.getLogger("bulk_fetcher")
 def get_db_connection(host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD):
     """PostgreSQL sunucusuna bağlanır, gerekirse DB'yi otomatik oluşturur."""
     hosts_to_try = [host]
-    if host == "localhost":
-        hosts_to_try.append("127.0.0.1")
+    if host in ("localhost", "127.0.0.1"):
+        hosts_to_try = ["127.0.0.1", "localhost"]
 
     last_error = None
-    for h in hosts_to_try:
-        try:
-            return psycopg2.connect(
-                host=h,
-                port=port,
-                dbname=dbname,
-                user=user,
-                password=password
-            )
-        except psycopg2.OperationalError as e:
-            last_error = e
-            if f'database "{dbname}" does not exist' in str(e) or 'veri tabanı yok' in str(e):
-                log.info(f"'{dbname}' veritabanı bulunamadı, oluşturuluyor...")
-                sys_conn = psycopg2.connect(
-                    host=h,
-                    port=port,
-                    dbname="postgres",
-                    user=user,
-                    password=password
-                )
-                sys_conn.autocommit = True
-                cur = sys_conn.cursor()
-                cur.execute(f'CREATE DATABASE "{dbname}"')
-                cur.close()
-                sys_conn.close()
-                log.info(f"✅ '{dbname}' veritabanı oluşturuldu.")
-
+    for attempt in range(5):
+        for h in hosts_to_try:
+            try:
                 return psycopg2.connect(
                     host=h,
                     port=port,
                     dbname=dbname,
                     user=user,
-                    password=password
+                    password=password,
+                    connect_timeout=5
                 )
+            except psycopg2.OperationalError as e:
+                last_error = e
+                if f'database "{dbname}" does not exist' in str(e) or 'veri tabanı yok' in str(e):
+                    log.info(f"'{dbname}' veritabanı bulunamadı, oluşturuluyor...")
+                    sys_conn = psycopg2.connect(
+                        host=h,
+                        port=port,
+                        dbname="postgres",
+                        user=user,
+                        password=password,
+                        connect_timeout=5
+                    )
+                    sys_conn.autocommit = True
+                    cur = sys_conn.cursor()
+                    cur.execute(f'CREATE DATABASE "{dbname}"')
+                    cur.close()
+                    sys_conn.close()
+                    log.info(f"✅ '{dbname}' veritabanı oluşturuldu.")
+
+                    return psycopg2.connect(
+                        host=h,
+                        port=port,
+                        dbname=dbname,
+                        user=user,
+                        password=password,
+                        connect_timeout=5
+                    )
+        time.sleep(1)
     
     log.error(f"PostgreSQL bağlantı hatası: {last_error}")
     raise last_error
