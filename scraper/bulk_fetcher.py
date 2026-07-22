@@ -194,93 +194,115 @@ def init_db(conn, wipe: bool = False):
 
 def save_tender_from_raw(conn, raw: dict):
     """Ham API yanıtından tek bir ihaleyi PostgreSQL'e kaydeder."""
-    c = conn.cursor()
+    if not raw.get("id") or not raw.get("ikn"):
+        return
 
-    c.execute("""
-        INSERT INTO tenders
-            (id, ikn, adi, idare_adi, il, ihale_tarihi, ihale_turu,
-             ihale_usulu, ihale_durumu, e_ihale, dokuman_sayisi)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (id) DO NOTHING
-    """, (
-        raw.get("id"),
-        raw.get("ikn"),
-        raw.get("ihaleAdi"),
-        raw.get("idareAdi"),
-        raw.get("ihaleIlAdi"),
-        raw.get("ihaleTarihSaat"),
-        raw.get("ihaleTipAciklama"),
-        raw.get("ihaleUsulAciklama"),
-        raw.get("ihaleDurumAciklama"),
-        1 if raw.get("ihaleTip") == "E" else 0,
-        raw.get("dokumanSayisi", 0),
-    ))
-    c.close()
+    c = conn.cursor()
+    try:
+        c.execute("SAVEPOINT save_tender")
+        c.execute("""
+            INSERT INTO tenders
+                (id, ikn, adi, idare_adi, il, ihale_tarihi, ihale_turu,
+                 ihale_usulu, ihale_durumu, e_ihale, dokuman_sayisi)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO NOTHING
+        """, (
+            str(raw.get("id")),
+            str(raw.get("ikn")),
+            raw.get("ihaleAdi"),
+            raw.get("idareAdi"),
+            raw.get("ihaleIlAdi"),
+            raw.get("ihaleTarihSaat"),
+            raw.get("ihaleTipAciklama"),
+            raw.get("ihaleUsulAciklama"),
+            raw.get("ihaleDurumAciklama"),
+            1 if raw.get("ihaleTip") == "E" else 0,
+            raw.get("dokumanSayisi", 0),
+        ))
+        c.execute("RELEASE SAVEPOINT save_tender")
+    except Exception as e:
+        try:
+            c.execute("ROLLBACK TO SAVEPOINT save_tender")
+        except Exception:
+            pass
+        log.warning(f"İhale kaydı atlandı ({raw.get('ikn')}): {e}")
+    finally:
+        c.close()
 
 
 def save_tender_details(conn, tender_id: str, details: dict):
     """Detay verisini PostgreSQL üzerindeki ihale kaydına ekler."""
     c = conn.cursor()
-    basic = details.get("basic_info", {})
+    try:
+        c.execute("SAVEPOINT save_details")
+        basic = details.get("basic_info", {})
 
-    c.execute("""
-        UPDATE tenders SET
-            kapsam       = %s,
-            e_ihale      = %s,
-            kismi_teklif = %s,
-            ihale_yeri   = %s,
-            isin_yeri    = %s,
-            updated_at   = CURRENT_TIMESTAMP
-        WHERE id = %s
-    """, (
-        basic.get("scope_description"),
-        1 if basic.get("is_electronic") else 0,
-        1 if basic.get("is_partial") else 0,
-        basic.get("venue"),
-        basic.get("location"),
-        tender_id,
-    ))
-
-    # Özellik etiketleri
-    c.execute("DELETE FROM tender_characteristics WHERE tender_id = %s", (tender_id,))
-    for ozellik in details.get("characteristics", []):
-        c.execute(
-            "INSERT INTO tender_characteristics (tender_id, ozellik) VALUES (%s, %s)",
-            (tender_id, ozellik)
-        )
-
-    # OKAS kodları
-    c.execute("DELETE FROM tender_okas_codes WHERE tender_id = %s", (tender_id,))
-    for okas in details.get("okas_codes", []):
-        c.execute(
-            "INSERT INTO tender_okas_codes (tender_id, kod, ad) VALUES (%s, %s, %s)",
-            (tender_id, okas.get("code"), okas.get("name"))
-        )
-
-    # İlanlar
-    announcements = details.get("announcements_summary", {}).get("announcements", [])
-    for ann in announcements:
-        ann_id = ann.get("id")
-        if not ann_id:
-            continue
         c.execute("""
-            INSERT INTO tender_announcements
-                (id, tender_id, ilan_tipi, ilan_tarihi, baslik, icerik)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO UPDATE SET
-                ilan_tipi = EXCLUDED.ilan_tipi,
-                ilan_tarihi = EXCLUDED.ilan_tarihi,
-                baslik = EXCLUDED.baslik,
-                icerik = EXCLUDED.icerik
+            UPDATE tenders SET
+                kapsam       = %s,
+                e_ihale      = %s,
+                kismi_teklif = %s,
+                ihale_yeri   = %s,
+                isin_yeri    = %s,
+                updated_at   = CURRENT_TIMESTAMP
+            WHERE id = %s
         """, (
-            ann_id,
+            basic.get("scope_description"),
+            1 if basic.get("is_electronic") else 0,
+            1 if basic.get("is_partial") else 0,
+            basic.get("venue"),
+            basic.get("location"),
             tender_id,
-            ann.get("type", {}).get("description"),
-            ann.get("date"),
-            ann.get("title"),
-            ann.get("markdown_content"),
         ))
-    c.close()
+
+        # Özellik etiketleri
+        c.execute("DELETE FROM tender_characteristics WHERE tender_id = %s", (tender_id,))
+        for ozellik in details.get("characteristics", []):
+            c.execute(
+                "INSERT INTO tender_characteristics (tender_id, ozellik) VALUES (%s, %s)",
+                (tender_id, ozellik)
+            )
+
+        # OKAS kodları
+        c.execute("DELETE FROM tender_okas_codes WHERE tender_id = %s", (tender_id,))
+        for okas in details.get("okas_codes", []):
+            c.execute(
+                "INSERT INTO tender_okas_codes (tender_id, kod, ad) VALUES (%s, %s, %s)",
+                (tender_id, okas.get("code"), okas.get("name"))
+            )
+
+        # İlanlar
+        announcements = details.get("announcements_summary", {}).get("announcements", [])
+        for ann in announcements:
+            ann_id = ann.get("id")
+            if not ann_id:
+                continue
+            c.execute("""
+                INSERT INTO tender_announcements
+                    (id, tender_id, ilan_tipi, ilan_tarihi, baslik, icerik)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    ilan_tipi = EXCLUDED.ilan_tipi,
+                    ilan_tarihi = EXCLUDED.ilan_tarihi,
+                    baslik = EXCLUDED.baslik,
+                    icerik = EXCLUDED.icerik
+            """, (
+                ann_id,
+                tender_id,
+                ann.get("type", {}).get("description"),
+                ann.get("date"),
+                ann.get("title"),
+                ann.get("markdown_content"),
+            ))
+        c.execute("RELEASE SAVEPOINT save_details")
+    except Exception as e:
+        try:
+            c.execute("ROLLBACK TO SAVEPOINT save_details")
+        except Exception:
+            pass
+        log.warning(f"İhale detay kaydı atlandı ({tender_id}): {e}")
+    finally:
+        c.close()
 
 
 async def search_tenders_fast(client: EKAPClient, **kwargs) -> dict:
