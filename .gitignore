@@ -21,4 +21,4 @@ appsettings.Development.json
 .DS_Store
 
 # Kişisel notlar (ekip reposuna gerekmez)
-EKAP_Backend_Context.md
+*.md
