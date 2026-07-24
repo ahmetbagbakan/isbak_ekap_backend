@@ -19,6 +19,7 @@ public class Tender
     public int? DokumanSayisi { get; set; }
     public string? CreatedAt { get; set; }
     public string? UpdatedAt { get; set; }
+    public string? TakipDurumu { get; set; }
 
 
     // İlişkiler (bir ihalenin birden çok özelliği/kodu/ilanı olabilir)
@@ -26,9 +27,4 @@ public class Tender
     public List<TenderOkasCode> OkasCodes { get; set; } = new();
     public List<TenderAnnouncement> Announcements { get; set; } = new();
 
-    // LLM'in dolduracağı alanlar
-    public int? IlgiSkoru { get; set; }            // 0-100 uygunluk skoru
-    public bool? SirketeUygunMu { get; set; }      // uygun mu bayrağı
-    public string? LlmOzeti { get; set; }          // kısa özet
-    public string? AnalizTarihi { get; set; }      // LLM ne zaman analiz etti
 }
