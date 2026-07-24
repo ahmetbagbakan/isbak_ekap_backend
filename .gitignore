@@ -19,7 +19,3 @@ appsettings.Development.json
 
 # Mac / editör sistem dosyaları
 .DS_Store
-
-# Kişisel notlar (ekip reposuna gerekmez)
-*.md
-!backend_tasks.md
