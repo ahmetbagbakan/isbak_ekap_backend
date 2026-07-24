@@ -19,3 +19,8 @@ appsettings.Development.json
 
 # Mac / editör sistem dosyaları
 .DS_Store
+
+# Kişisel notlar (ekip reposuna gerekmez, çakışma yaratmasın)
+EKAP_Backend_Context.md
+EKAP_Backend_Roadmap.md
+PROJE_YAPISI.md
