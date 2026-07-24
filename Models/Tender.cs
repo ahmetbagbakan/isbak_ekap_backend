@@ -17,9 +17,9 @@ public class Tender
     public string? IhaleYeri { get; set; }
     public string? IsinYeri { get; set; }
     public int? DokumanSayisi { get; set; }
-    public int? DetayCekildi { get; set; }
     public string? CreatedAt { get; set; }
     public string? UpdatedAt { get; set; }
+
 
     // İlişkiler (bir ihalenin birden çok özelliği/kodu/ilanı olabilir)
     public List<TenderCharacteristic> Characteristics { get; set; } = new();

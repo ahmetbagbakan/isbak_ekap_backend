@@ -1,93 +1,97 @@
-# EKAP Backend — Yol Haritası (Roadmap)
+# EKAP Backend — Yol Haritası (Güncel)
 
-Projenin backend (.NET / C#) tarafını baştan sona adım adım gösteren yol haritası.
+Backend (.NET / C#) tarafının adım adım yol haritası.
 İşaretleme: [x] tamamlandı, [~] şu an burada, [ ] yapılacak.
 
----
-
-## AŞAMA 1 — Kurulum ve temel yapı  ✅ (bitti)
-
-- [x] 1.1 .NET SDK ve VS Code (C# Dev Kit eklentisi) kurulu
-- [x] 1.2 `dotnet new webapi -n EkapBackend` ile Web API projesi oluşturuldu
-- [x] 1.3 PostgreSQL kuruldu (Postgres.app), `ekap` adında boş veritabanı açıldı
-- [x] 1.4 NuGet paketleri kuruldu:
-        - Npgsql.EntityFrameworkCore.PostgreSQL
-        - Microsoft.EntityFrameworkCore.Design
-
-## AŞAMA 2 — Veri modeli (entity + DbContext)  ✅ (bitti)
-
-- [x] 2.1 `Models/` klasörü + 4 entity sınıfı:
-        Tender, TenderCharacteristic, TenderOkasCode, TenderAnnouncement
-        (LLM alanları Tender içinde: IlgiSkoru, SirketeUygunMu, LlmOzeti, AnalizTarihi)
-- [x] 2.2 `Data/EkapDbContext.cs` — DbSet'ler + ToTable + bire-çok ilişkiler
+**Önemli karar:** Backend, ekibin ORTAK PostgreSQL veritabanına bağlanıyor
+(Host: 192.168.100.42, DB: isbak_ekap_db). Tabloları Python ekibi oluşturdu.
+Bu yüzden MIGRATION ÇALIŞTIRILMIYOR — sadece bağlanıp okuma/yazma yapılıyor.
+(Erişim için İŞ ağında / VPN'de olmak gerekir.)
 
 ---
 
-## AŞAMA 3 — Veritabanı bağlantısı  ⬅️ ŞU AN BURADAYIM
+## AŞAMA 1 — Kurulum ve temel yapı  ✅
 
-- [ ] 3.1 `appsettings.json` → ConnectionStrings > EkapDb (Host/Port/Database/Username/Password)
-- [ ] 3.2 `Program.cs` → AddDbContext<EkapDbContext>(UseNpgsql(...)) + using satırları
-- [ ] 3.3 `dotnet build` → "Build succeeded" ile doğrula
+- [x] .NET SDK + VS Code (C# Dev Kit)
+- [x] `dotnet new webapi -n EkapBackend` — Web API iskeleti
+- [x] PostgreSQL (ekip ortak sunucusu, isbak_ekap_db)
+- [x] NuGet: Npgsql.EntityFrameworkCore.PostgreSQL + Microsoft.EntityFrameworkCore.Design
 
-## AŞAMA 4 — Migration (PostgreSQL'de tabloları oluştur)
+## AŞAMA 2 — Veri modeli (entity + DbContext)  ✅
 
-- [ ] 4.1 (Gerekirse) `dotnet tool install --global dotnet-ef`
-- [ ] 4.2 `dotnet ef migrations add InitialCreate` → migration dosyası üretilir
-- [ ] 4.3 `dotnet ef database update` → tablolar ekap veritabanında GERÇEKTEN oluşur
-- [ ] 4.4 Doğrulama: DBeaver/psql ile ekap içinde 4 tablonun oluştuğunu gör (boş)
+- [x] Models/ → 4 entity: Tender, TenderCharacteristic, TenderOkasCode, TenderAnnouncement
+       (Tender içinde LLM alanları: IlgiSkoru, SirketeUygunMu, LlmOzeti, AnalizTarihi)
+- [x] Data/EkapDbContext.cs → DbSet'ler + ToTable + bire-çok ilişkiler
 
-## AŞAMA 5 — Veri aktarımı (SQLite → PostgreSQL)
+## AŞAMA 3 — Veritabanı bağlantısı  ✅
 
-- [ ] 5.1 Karar: iş anahtarı `ikn` mi `id` mi? (duplicate kontrolü için) — Python ekibiyle netleştir
-- [ ] 5.2 SQLite (ekap_ihaleler.db) verisini PostgreSQL'e taşı
-        (tek seferlik aktarım scripti VEYA ileride import endpoint'i)
-- [ ] 5.3 Doğrulama: PostgreSQL'de kayıt sayısı SQLite ile eşleşiyor mu (47.001 tender)
-
----
-
-## AŞAMA 6 — İlk API endpoint'leri (okuma)
-
-- [ ] 6.1 `Controllers/IhaleController.cs` oluştur
-- [ ] 6.2 GET /api/ihaleler → ihaleleri listele (sayfalama ile, hepsini birden döndürme)
-- [ ] 6.3 GET /api/ihaleler/{ikn} → tek ihale detayı (characteristics + okas + announcements dahil)
-- [ ] 6.4 Swagger'da test et (dotnet run → /swagger)
-
-## AŞAMA 7 — Filtreleme (asıl iş değeri)
-
-- [ ] 7.1 GET /api/ihaleler?il=...&tur=...&durum=...&baslangic=...&bitis=...
-        (il, ihale türü, durum, tarih aralığı, anahtar kelime filtreleri)
-- [ ] 7.2 Sayfalama + sıralama (tarihe göre vb.)
-
-## AŞAMA 8 — LLM entegrasyon noktası
-
-- [ ] 8.1 PUT /api/ihaleler/{ikn}/analiz → LLM'in IlgiSkoru, SirketeUygunMu, LlmOzeti yazması
-- [ ] 8.2 GET /api/ihaleler?minSkor=... → skora göre filtreleme (frontend "uygun ihaleler" listesi)
-- [ ] 8.3 Karar: LLM API üzerinden mi yazsın, DB'ye doğrudan mı? (API önerilir)
-
-## AŞAMA 9 — Veri besleme akışı (Python ↔ Backend)
-
-- [ ] 9.1 POST /api/ihaleler/import → Python'un yeni ihaleleri JSON gönderdiği endpoint
-- [ ] 9.2 Duplicate kontrolü (ikn üzerinden) — aynı ihale iki kez yazılmasın
-- [ ] 9.3 Karar: Python periyodik mi besleyecek, tek seferlik mi?
-
-## AŞAMA 10 — Son rötuşlar
-
-- [ ] 10.1 CORS ayarı (frontend başka porttan çağırabilsin)
-- [ ] 10.2 Hata yönetimi (uygun HTTP kodları: 404, 400 vb.)
-- [ ] 10.3 (Opsiyonel) N-layer'a geçiş: iş mantığını Services/ katmanına taşı
-- [ ] 10.4 (Opsiyonel) Temel testler
+- [x] appsettings.json → ConnectionStrings > DefaultConnection (ortak DB bilgileri)
+       (appsettings.json .gitignore'da — şifre repoya gitmiyor)
+- [x] Program.cs → AddDbContext<EkapDbContext>(UseNpgsql(...)) + using satırları
+- [x] `dotnet build` → başarılı (Build succeeded)
 
 ---
 
-## Notlar
+## AŞAMA 4 — Modelleri gerçek tabloyla eşleştir + bağlantı testi  ⬅️ ŞU AN BURADAYIM
 
-- Her aşamada: önce ne/neden yapıldığı anlaşılsın, sonra uygulansın. Otomatik geçme yok.
-- SQLite verisi kurum verisi — buluta/online araçlara yüklenmez, yerel işlenir.
-- C#/.NET yeni öğreniliyor → kavramlar (class, property, EF Core, migration vb.) yeri geldikçe açıklanacak.
-- Bu dosyayı ilerledikçe güncelle: tamamlananı [x], bulunduğun yeri [~] yap.
+Migration YOK. Bunun yerine: modellerin gerçek tablolara oturduğunu doğrula.
 
-## Ekiple netleşmesi gereken kararlar (özet)
+- [ ] 4.1 Gerçek tablo/sütun isimlerini teyit et
+       (Python'cunun SQLite'ındakiyle aynı mı: tenders, tender_characteristics,
+        tender_okas_codes, tender_announcements?)
+- [ ] 4.2 Basit test controller'ı yaz (örn. GET /api/ihaleler → ilk 10 ihale)
+- [ ] 4.3 `dotnet run` → uygulamayı çalıştır
+- [ ] 4.4 Tarayıcı/Swagger'da endpoint'i aç → gerçek veri geliyor mu gör
+       (Bağlantı + model eşleşmesi burada kanıtlanır)
+- [ ] 4.5 Hata çıkarsa: model/sütun isimlerini gerçek tabloya göre düzelt
 
-1. İş anahtarı: ikn mi id mi?
-2. Python veriyi nasıl besleyecek: dosya mı, import endpoint'i mi?
+## AŞAMA 5 — Okuma endpoint'leri (temel API)
+
+- [ ] 5.1 Controllers/IhaleController.cs
+- [ ] 5.2 GET /api/ihaleler → sayfalama ile liste (hepsini birden döndürme!)
+- [ ] 5.3 GET /api/ihaleler/{ikn} → tek ihale detayı
+       (characteristics + okas kodları + ilanlar dahil — Include ile)
+- [ ] 5.4 Swagger'da test
+
+## AŞAMA 6 — Filtreleme (asıl iş değeri)
+
+- [ ] 6.1 GET /api/ihaleler?il=...&tur=...&durum=...&baslangic=...&bitis=...
+       (il, ihale türü, durum, tarih aralığı, anahtar kelime)
+- [ ] 6.2 Sayfalama + sıralama (tarihe göre vb.)
+
+## AŞAMA 7 — LLM entegrasyon noktası
+
+- [ ] 7.1 PUT /api/ihaleler/{ikn}/analiz → LLM'in IlgiSkoru, SirketeUygunMu, LlmOzeti yazması
+- [ ] 7.2 GET /api/ihaleler?minSkor=... → skora göre filtrele (frontend "uygun ihaleler")
+- [ ] 7.3 Karar: LLM API üzerinden mi yazsın, DB'ye doğrudan mı? (API önerilir)
+
+## AŞAMA 8 — Son rötuşlar
+
+- [ ] 8.1 CORS ayarı (frontend başka porttan çağırabilsin)
+- [ ] 8.2 Hata yönetimi (404, 400 gibi uygun HTTP kodları)
+- [ ] 8.3 Microsoft.OpenApi paketini güncelle (NU1903 güvenlik uyarısı)
+- [ ] 8.4 appsettings.example.json ekle (ekip için şifresiz örnek ayar)
+- [ ] 8.5 (Opsiyonel) İş mantığını Services/ katmanına taşı (N-layer)
+
+---
+
+## Teknoloji özeti
+
+- Dil/platform: C# / ASP.NET Core Web API (.NET 10)
+- Veritabanı: PostgreSQL (ekip ortak sunucusu, isbak_ekap_db @ 192.168.100.42)
+- ORM: Entity Framework Core + Npgsql
+- Editör: VS Code
+- Repo: github.com/ahmetbagbakan/isbak_ekap_backend (branch: dev)
+
+## Ekiple netleşecek kararlar
+
+1. Gerçek tablo/sütun isimleri SQLite'takiyle birebir aynı mı?
+2. İş anahtarı ikn mi id mi? (Python'da ON CONFLICT ikn UNIQUE kullanılmış — muhtemelen ikn)
 3. LLM skoru nasıl yazacak: API mi, doğrudan DB mi?
+4. appsettings ekip içinde nasıl paylaşılacak? (example dosyası)
+
+## Git alışkanlığı (hatırlatma)
+
+- Anlamlı iş bitince commit, günün sonunda / aşama bitince push.
+- Push'tan ÖNCE her zaman: git pull origin dev
+- appsettings.json ve .env repoya GİTMEZ (şifre içerir, gitignore'da).
